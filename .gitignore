@@ -1,0 +1,45 @@
+# Node modules
+node_modules/
+
+# Build output
+dist/
+build/
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Dependency directories
+.pnp/
+.pnp.js
+
+# Editor settings
+.vscode/
+.idea/
+
+# OS-specific files
+.DS_Store
+Thumbs.db
+
+# dotenv environment files (if used)
+.env
+.env.*.local
+
+# TypeScript cache
+*.tsbuildinfo
+
+# Next.js / Vite (if you ever migrate)
+.next/
+out/
+.cache/
+
+# Tailwind output cache
+.tailwind-cache/
+
+# Misc
+package-lock.json
+
+
+venv/
+.venv/
