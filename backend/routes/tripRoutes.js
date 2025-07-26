@@ -6,16 +6,28 @@ const Trip = require("../models/Trip"); // <-- correct relative path to Trip.js
 router.post("/", async (req, res) => {
   try {
     const { name, participants } = req.body;
-    if (!name || !participants) {
-      return res
-        .status(400)
-        .json({ error: "Name and participants are required" });
+    
+    // Input validation
+    if (!name || name.trim() === "") {
+      return res.status(400).json({ error: "Trip name is required" });
     }
-    const trip = new Trip({ name, participants });
+    
+    if (!participants || !Array.isArray(participants) || participants.length === 0) {
+      return res.status(400).json({ error: "At least one participant is required" });
+    }
+    const validParticipants = participants.filter(p => p && p.trim() !== "");
+    if (validParticipants.length === 0) {
+      return res.status(400).json({ error: "At least one valid participant is required" });
+    }
+    
+    const trip = new Trip({ 
+      name: name.trim(), 
+      participants: validParticipants 
+    });
     await trip.save();
     res.status(201).json(trip);
   } catch (err) {
-    console.error("Error creating trip:", err); // Add this line
+    console.error("Error creating trip:", err);
     res.status(500).json({ error: err.message });
   }
 });
@@ -36,10 +48,32 @@ router.post("/:tripId/expenses", async (req, res) => {
     const { tripId } = req.params;
     const { description, amount, paidBy } = req.body;
 
+    // Input validation
+    if (!description || description.trim() === "") {
+      return res.status(400).json({ error: "Expense description is required" });
+    }
+    
+    if (!amount || isNaN(amount) || amount <= 0) {
+      return res.status(400).json({ error: "Valid expense amount is required" });
+    }
+    
+    if (!paidBy || paidBy.trim() === "") {
+      return res.status(400).json({ error: "Payer name is required" });
+    }
+
     const trip = await Trip.findById(tripId);
     if (!trip) return res.status(404).json({ error: "Trip not found" });
 
-    trip.expenses.push({ description, amount, paidBy });
+    // Check if payer is a participant
+    if (!trip.participants.includes(paidBy.trim())) {
+      return res.status(400).json({ error: "Payer must be a trip participant" });
+    }
+
+    trip.expenses.push({ 
+      description: description.trim(), 
+      amount: parseFloat(amount), 
+      paidBy: paidBy.trim() 
+    });
     await trip.save();
 
     res.status(201).json(trip);
@@ -95,13 +129,35 @@ router.put("/:tripId/expenses/:expenseIndex", async (req, res) => {
     const { tripId, expenseIndex } = req.params;
     const { description, amount, paidBy } = req.body;
 
+    // Input validation
+    if (!description || description.trim() === "") {
+      return res.status(400).json({ error: "Expense description is required" });
+    }
+    
+    if (!amount || isNaN(amount) || amount <= 0) {
+      return res.status(400).json({ error: "Valid expense amount is required" });
+    }
+    
+    if (!paidBy || paidBy.trim() === "") {
+      return res.status(400).json({ error: "Payer name is required" });
+    }
+
     const trip = await Trip.findById(tripId);
     if (!trip) return res.status(404).json({ error: "Trip not found" });
 
     if (!trip.expenses[expenseIndex])
       return res.status(404).json({ error: "Expense not found" });
 
-    trip.expenses[expenseIndex] = { description, amount, paidBy };
+    // Check if payer is a participant
+    if (!trip.participants.includes(paidBy.trim())) {
+      return res.status(400).json({ error: "Payer must be a trip participant" });
+    }
+
+    trip.expenses[expenseIndex] = { 
+      description: description.trim(), 
+      amount: parseFloat(amount), 
+      paidBy: paidBy.trim() 
+    };
     await trip.save();
 
     res.json(trip);
@@ -110,7 +166,6 @@ router.put("/:tripId/expenses/:expenseIndex", async (req, res) => {
   }
 });
 // Delete a specific expense by index
-
 router.delete("/:tripId/expenses/:expenseIndex", async (req, res) => {
   try {
     const { tripId, expenseIndex } = req.params;
@@ -122,25 +177,6 @@ router.delete("/:tripId/expenses/:expenseIndex", async (req, res) => {
       return res.status(404).json({ error: "Expense not found" });
 
     trip.expenses.splice(expenseIndex, 1); // Remove the expense
-    await trip.save();
-
-    res.json(trip);
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-router.put("/:tripId/expenses/:expenseIndex", async (req, res) => {
-  try {
-    const { tripId, expenseIndex } = req.params;
-    const { description, amount, paidBy } = req.body;
-
-    const trip = await Trip.findById(tripId);
-    if (!trip) return res.status(404).json({ error: "Trip not found" });
-
-    if (!trip.expenses[expenseIndex])
-      return res.status(404).json({ error: "Expense not found" });
-
-    trip.expenses[expenseIndex] = { description, amount, paidBy };
     await trip.save();
 
     res.json(trip);
